@@ -12,7 +12,7 @@ pub const Encoder = struct {
 
     pub fn init(allocator: std.mem.Allocator) !Encoder {
         return Encoder{
-            .dynamic_table = std.ArrayList(HeaderField).init(allocator),
+            .dynamic_table = try std.ArrayList(HeaderField).initCapacity(allocator, 1),
             .allocator = allocator,
         };
     }
@@ -22,31 +22,31 @@ pub const Encoder = struct {
             self.allocator.free(field.name);
             self.allocator.free(field.value);
         }
-        self.dynamic_table.deinit();
+        self.dynamic_table.deinit(self.allocator);
     }
 
     pub fn encode(self: *Encoder, headers: std.StringHashMap([]const u8)) ![]u8 {
-        var buffer = std.ArrayList(u8).init(self.allocator);
-        errdefer buffer.deinit();
+        var buffer = std.ArrayList(u8){};
+        errdefer buffer.deinit(self.allocator);
 
         var it = headers.iterator();
         while (it.next()) |entry| {
             try self.encodeField(&buffer, entry.key_ptr.*, entry.value_ptr.*);
         }
 
-        return buffer.toOwnedSlice();
+        return buffer.toOwnedSlice(self.allocator);
     }
 
     fn encodeField(self: *Encoder, buffer: *std.ArrayList(u8), name: []const u8, value: []const u8) !void {
         // Simple literal header field encoding
-        try buffer.append(0x0); // New name
+        try buffer.append(self.allocator, 0x0); // New name
         try self.encodeString(buffer, name);
         try self.encodeString(buffer, value);
     }
 
     fn encodeString(self: *Encoder, buffer: *std.ArrayList(u8), str: []const u8) !void {
-        try buffer.append(@intCast(str.len));
-        try buffer.appendSlice(str);
+        try buffer.append(self.allocator, @intCast(str.len));
+        try buffer.appendSlice(self.allocator, str);
     }
 };
 
@@ -56,7 +56,7 @@ pub const Decoder = struct {
 
     pub fn init(allocator: std.mem.Allocator) !Decoder {
         return Decoder{
-            .dynamic_table = std.ArrayList(HeaderField).init(allocator),
+            .dynamic_table = try std.ArrayList(HeaderField).initCapacity(allocator, 1),
             .allocator = allocator,
         };
     }
@@ -66,7 +66,7 @@ pub const Decoder = struct {
             self.allocator.free(field.name);
             self.allocator.free(field.value);
         }
-        self.dynamic_table.deinit();
+        self.dynamic_table.deinit(self.allocator);
     }
 
     pub fn decode(self: *Decoder, encoded: []const u8) !std.StringHashMap([]const u8) {
@@ -84,14 +84,13 @@ pub const Decoder = struct {
     }
 
     fn decodeField(self: *Decoder, encoded: []const u8) !HeaderField {
-        _ = self;
         if (encoded[0] == 0x0) {
             // Literal header field
             const name_len = encoded[1];
-            const name = encoded[2..2+name_len];
-            const value_len = encoded[2+name_len];
-            const value = encoded[3+name_len..3+name_len+value_len];
-            
+            const name = encoded[2 .. 2 + name_len];
+            const value_len = encoded[2 + name_len];
+            const value = encoded[3 + name_len .. 3 + name_len + value_len];
+
             return HeaderField{
                 .name = try self.allocator.dupe(u8, name),
                 .value = try self.allocator.dupe(u8, value),

@@ -58,21 +58,40 @@ pub const Transport = struct {
         settings_frame.flags = 0;
         settings_frame.stream_id = 0;
         // Add your settings here
-
-        var writer = std.io.bufferedWriter(self.stream.writer());
-        try settings_frame.encode(writer.writer());
-        try writer.flush();
+        var buffer: [4096]u8 = undefined;
+        var writer = self.stream.writer(&buffer);
+        try settings_frame.encode(&writer.interface);
     }
 
     pub fn readMessage(self: *Transport) ![]const u8 {
-        var frame_reader = std.io.bufferedReader(self.stream.reader());
-        const frame = try http2.frame.Frame.decode(frame_reader.reader(), self.allocator);
-        defer frame.deinit(self.allocator);
+        // Read frame header first (9 bytes)
+        const header_size = 9;
+        var header: [header_size]u8 = undefined;
+        const bytes_read = try self.stream.read(&header);
+        if (bytes_read < header_size) return TransportError.ConnectionClosed;
 
-        if (frame.type == .DATA) {
-            return try self.allocator.dupe(u8, frame.payload);
+        // Parse header manually
+        const length = (@as(u24, header[0]) << 16) | (@as(u24, header[1]) << 8) | @as(u24, header[2]);
+        const frame_type = header[3];
+
+        // Read payload
+        const payload = try self.allocator.alloc(u8, length);
+        errdefer self.allocator.free(payload);
+
+        if (length > 0) {
+            const payload_read = try self.stream.read(payload);
+            if (payload_read < length) {
+                self.allocator.free(payload);
+                return TransportError.ConnectionClosed;
+            }
         }
 
+        // For DATA frames, return payload
+        if (frame_type == 0x0) { // DATA frame
+            return payload;
+        }
+
+        self.allocator.free(payload);
         return TransportError.Http2Error;
     }
 
@@ -86,8 +105,21 @@ pub const Transport = struct {
         data_frame.payload = message;
         data_frame.length = @intCast(message.len);
 
-        var writer = std.io.bufferedWriter(self.stream.writer());
-        try data_frame.encode(writer.writer());
-        try writer.flush();
+        // Write frame header
+        var header: [9]u8 = undefined;
+        header[0] = @intCast((data_frame.length >> 16) & 0xFF);
+        header[1] = @intCast((data_frame.length >> 8) & 0xFF);
+        header[2] = @intCast(data_frame.length & 0xFF);
+        header[3] = @intFromEnum(data_frame.type);
+        header[4] = data_frame.flags;
+        header[5] = @intCast((data_frame.stream_id >> 24) & 0xFF);
+        header[6] = @intCast((data_frame.stream_id >> 16) & 0xFF);
+        header[7] = @intCast((data_frame.stream_id >> 8) & 0xFF);
+        header[8] = @intCast(data_frame.stream_id & 0xFF);
+
+        _ = try self.stream.write(&header);
+        if (message.len > 0) {
+            _ = try self.stream.write(message);
+        }
     }
 };

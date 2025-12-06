@@ -60,12 +60,12 @@ const ClientWorker = struct {
         return ClientWorker{
             .allocator = allocator,
             .config = config,
-            .results = std.ArrayList(f64).init(allocator),
+            .results = .empty,
         };
     }
 
     fn deinit(self: *ClientWorker) void {
-        self.results.deinit();
+        self.results.deinit(self.allocator);
     }
 
     fn runBenchmark(self: *ClientWorker) !void {
@@ -86,28 +86,28 @@ const ClientWorker = struct {
         // Actual benchmark requests
         for (0..self.config.num_requests) |_| {
             const timer = Timer.start();
-            
+
             const response = client.call("Benchmark", payload, .none) catch |err| {
                 std.log.warn("Request failed: {}", .{err});
                 continue;
             };
-            
+
             const elapsed = timer.elapsed_ms();
-            try self.results.append(elapsed);
-            
+            try self.results.append(self.allocator, elapsed);
+
             self.allocator.free(response);
         }
     }
 
     fn generatePayload(self: *ClientWorker) ![]u8 {
         const payload = try self.allocator.alloc(u8, self.config.request_size_bytes);
-        var prng = std.rand.DefaultPrng.init(@as(u64, @intCast(std.time.milliTimestamp())));
+        var prng = std.Random.DefaultPrng.init(@as(u64, @intCast(std.time.milliTimestamp())));
         const random = prng.random();
-        
+
         for (payload) |*byte| {
             byte.* = random.int(u8);
         }
-        
+
         return payload;
     }
 };
@@ -146,24 +146,24 @@ fn calculateLatencyStats(latencies: []f64) BenchmarkResults.LatencyStats {
 fn runBenchmark(allocator: std.mem.Allocator, config: BenchmarkConfig) !BenchmarkResults {
     std.log.info("Starting benchmark with {} concurrent clients, {} requests each", .{ config.concurrent_clients, config.num_requests });
 
-    var all_latencies = std.ArrayList(f64).init(allocator);
-    defer all_latencies.deinit();
+    var all_latencies = try std.ArrayList(f64).initCapacity(allocator, config.concurrent_clients);
+    defer all_latencies.deinit(allocator);
 
     const overall_timer = Timer.start();
 
     // Create and run client workers concurrently
-    var workers = std.ArrayList(ClientWorker).init(allocator);
+    var workers = try std.ArrayList(ClientWorker).initCapacity(allocator, config.concurrent_clients);
     defer {
         for (workers.items) |*worker| {
             worker.deinit();
         }
-        workers.deinit();
+        workers.deinit(allocator);
     }
 
     // Initialize workers
     for (0..config.concurrent_clients) |_| {
-        var worker = ClientWorker.init(allocator, config);
-        try workers.append(worker);
+        const worker = ClientWorker.init(allocator, config);
+        workers.appendAssumeCapacity(worker);
     }
 
     // Run workers (simplified - in real implementation you'd use threads)
@@ -179,7 +179,7 @@ fn runBenchmark(allocator: std.mem.Allocator, config: BenchmarkConfig) !Benchmar
 
         // Collect results
         for (worker.results.items) |latency| {
-            try all_latencies.append(latency);
+            try all_latencies.append(allocator, latency);
         }
         total_successful += @as(u32, @intCast(worker.results.items.len));
         total_failed += config.num_requests - @as(u32, @intCast(worker.results.items.len));
@@ -201,36 +201,51 @@ fn runBenchmark(allocator: std.mem.Allocator, config: BenchmarkConfig) !Benchmar
     };
 }
 
-fn outputResults(allocator: std.mem.Allocator, results: BenchmarkResults, format: enum { json, text }) !void {
+fn outputResults(_: std.mem.Allocator, results: BenchmarkResults, format: Format) !void {
     switch (format) {
         .json => {
-            const json_string = try json.stringifyAlloc(allocator, results, .{ .whitespace = .{.indent = .{.space = 2}} });
-            defer allocator.free(json_string);
-            std.log.info("Benchmark Results (JSON):\n{s}", .{json_string});
+            // Simple JSON output without using Stringify
+            std.debug.print("{{\n", .{});
+            std.debug.print("  \"total_requests\": {},\n", .{results.total_requests});
+            std.debug.print("  \"successful_requests\": {},\n", .{results.successful_requests});
+            std.debug.print("  \"failed_requests\": {},\n", .{results.failed_requests});
+            std.debug.print("  \"total_duration_ms\": {d:.2},\n", .{results.total_duration_ms});
+            std.debug.print("  \"requests_per_second\": {d:.2},\n", .{results.requests_per_second});
+            std.debug.print("  \"latency_stats\": {{\n", .{});
+            std.debug.print("    \"min_ms\": {d:.2},\n", .{results.latency_stats.min_ms});
+            std.debug.print("    \"max_ms\": {d:.2},\n", .{results.latency_stats.max_ms});
+            std.debug.print("    \"avg_ms\": {d:.2},\n", .{results.latency_stats.avg_ms});
+            std.debug.print("    \"p95_ms\": {d:.2},\n", .{results.latency_stats.p95_ms});
+            std.debug.print("    \"p99_ms\": {d:.2}\n", .{results.latency_stats.p99_ms});
+            std.debug.print("  }},\n", .{});
+            std.debug.print("  \"error_rate\": {d:.4},\n", .{results.error_rate});
+            std.debug.print("  \"timestamp\": {}\n", .{results.timestamp});
+            std.debug.print("}}\n", .{});
         },
         .text => {
-            std.log.info("Benchmark Results:");
-            std.log.info("==================");
-            std.log.info("Total Requests: {}", .{results.total_requests});
-            std.log.info("Successful: {}", .{results.successful_requests});
-            std.log.info("Failed: {}", .{results.failed_requests});
-            std.log.info("Error Rate: {d:.2}%", .{results.error_rate * 100});
-            std.log.info("Total Duration: {d:.2}ms", .{results.total_duration_ms});
-            std.log.info("Requests/sec: {d:.2}", .{results.requests_per_second});
-            std.log.info("Latency Stats:");
-            std.log.info("  Min: {d:.2}ms", .{results.latency_stats.min_ms});
-            std.log.info("  Max: {d:.2}ms", .{results.latency_stats.max_ms});
-            std.log.info("  Avg: {d:.2}ms", .{results.latency_stats.avg_ms});
-            std.log.info("  P95: {d:.2}ms", .{results.latency_stats.p95_ms});
-            std.log.info("  P99: {d:.2}ms", .{results.latency_stats.p99_ms});
+            std.debug.print("Benchmark Results:\n", .{});
+            std.debug.print("==================\n", .{});
+            std.debug.print("Total Requests: {}\n", .{results.total_requests});
+            std.debug.print("Successful: {}\n", .{results.successful_requests});
+            std.debug.print("Failed: {}\n", .{results.failed_requests});
+            std.debug.print("Error Rate: {d:.2}%\n", .{results.error_rate * 100});
+            std.debug.print("Total Duration: {d:.2}ms\n", .{results.total_duration_ms});
+            std.debug.print("Requests/sec: {d:.2}\n", .{results.requests_per_second});
+            std.debug.print("Latency Stats:\n", .{});
+            std.debug.print("  Min: {d:.2}ms\n", .{results.latency_stats.min_ms});
+            std.debug.print("  Max: {d:.2}ms\n", .{results.latency_stats.max_ms});
+            std.debug.print("  Avg: {d:.2}ms\n", .{results.latency_stats.avg_ms});
+            std.debug.print("  P95: {d:.2}ms\n", .{results.latency_stats.p95_ms});
+            std.debug.print("  P99: {d:.2}ms\n", .{results.latency_stats.p99_ms});
         },
     }
 }
 
-fn parseArgs(allocator: std.mem.Allocator) !struct { config: BenchmarkConfig, output_format: enum { json, text } } {
-    var config = BenchmarkConfig{};
-    var output_format: enum { json, text } = .text;
+pub const Format = enum { json, text };
 
+fn parseArgs(allocator: std.mem.Allocator) !struct { config: BenchmarkConfig, output_format: Format } {
+    var config = BenchmarkConfig{};
+    var format: Format = .text;
     const args = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, args);
 
@@ -253,9 +268,9 @@ fn parseArgs(allocator: std.mem.Allocator) !struct { config: BenchmarkConfig, ou
             i += 1;
         } else if (std.mem.eql(u8, args[i], "--output") and i + 1 < args.len) {
             if (std.mem.eql(u8, args[i + 1], "json")) {
-                output_format = .json;
+                format = .json;
             } else if (std.mem.eql(u8, args[i + 1], "text")) {
-                output_format = .text;
+                format = .text;
             }
             i += 1;
         } else if (std.mem.eql(u8, args[i], "--help")) {
@@ -264,21 +279,21 @@ fn parseArgs(allocator: std.mem.Allocator) !struct { config: BenchmarkConfig, ou
         }
     }
 
-    return .{ .config = config, .output_format = output_format };
+    return .{ .config = config, .output_format = format };
 }
 
 fn printUsage() void {
-    std.log.info("gRPC-zig Benchmark Tool");
-    std.log.info("Usage: benchmark [options]");
-    std.log.info("");
-    std.log.info("Options:");
-    std.log.info("  --host <host>       Server host (default: localhost)");
-    std.log.info("  --port <port>       Server port (default: 50051)");
-    std.log.info("  --requests <n>      Number of requests per client (default: 1000)");
-    std.log.info("  --clients <n>       Number of concurrent clients (default: 10)");
-    std.log.info("  --size <bytes>      Request payload size (default: 1024)");
-    std.log.info("  --output <format>   Output format: text|json (default: text)");
-    std.log.info("  --help              Show this help message");
+    std.debug.print("gRPC-zig Benchmark Tool", .{});
+    std.debug.print("Usage: benchmark [options]", .{});
+    std.debug.print("", .{});
+    std.debug.print("Options:", .{});
+    std.debug.print("  --host <host>       Server host (default: localhost)", .{});
+    std.debug.print("  --port <port>       Server port (default: 50051)", .{});
+    std.debug.print("  --requests <n>      Number of requests per client (default: 1000)", .{});
+    std.debug.print("  --clients <n>       Number of concurrent clients (default: 10)", .{});
+    std.debug.print("  --size <bytes>      Request payload size (default: 1024)", .{});
+    std.debug.print("  --output <format>   Output format: text|json (default: text)", .{});
+    std.debug.print("  --help              Show this help message", .{});
 }
 
 // Simple benchmark handler for testing
@@ -297,13 +312,13 @@ pub fn main() !void {
     const config = parsed.config;
     const output_format = parsed.output_format;
 
-    std.log.info("gRPC-zig Benchmark Tool");
-    std.log.info("Configuration:");
-    std.log.info("  Host: {s}:{}", .{ config.host, config.port });
-    std.log.info("  Requests per client: {}", .{config.num_requests});
-    std.log.info("  Concurrent clients: {}", .{config.concurrent_clients});
-    std.log.info("  Request size: {} bytes", .{config.request_size_bytes});
-    std.log.info("  Output format: {}", .{output_format});
+    std.debug.print("gRPC-zig Benchmark Tool", .{});
+    std.debug.print("Configuration:", .{});
+    std.debug.print("  Host: {s}:{}", .{ config.host, config.port });
+    std.debug.print("  Requests per client: {}", .{config.num_requests});
+    std.debug.print("  Concurrent clients: {}", .{config.concurrent_clients});
+    std.debug.print("  Request size: {} bytes", .{config.request_size_bytes});
+    std.debug.print("  Output format: {}", .{output_format});
 
     const results = try runBenchmark(allocator, config);
     try outputResults(allocator, results, output_format);

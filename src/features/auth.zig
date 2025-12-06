@@ -52,26 +52,15 @@ pub const Auth = struct {
 
     pub fn generateToken(self: *Auth, subject: []const u8, expires_in: i64) ![]u8 {
         const now = std.time.timestamp();
-        
-        const header = TokenHeader{
-            .alg = "HS256",
-            .typ = "JWT",
-        };
 
-        const payload = TokenPayload{
-            .sub = subject,
-            .exp = now + expires_in,
-            .iat = now,
-        };
+        // Simplified JWT creation without JSON - just create a simple token string
+        // Format: "HS256.JWT.{subject}.{exp}.{iat}"
+        const token_str = try std.fmt.allocPrint(
+            self.allocator,
+            "HS256.JWT.{s}.{d}.{d}",
+            .{ subject, now + expires_in, now },
+        );
 
-        var token = std.ArrayList(u8).init(self.allocator);
-        defer token.deinit();
-
-        // Simplified JWT creation
-        try std.json.stringify(header, .{}, token.writer());
-        try token.append('.');
-        try std.json.stringify(payload, .{}, token.writer());
-
-        return token.toOwnedSlice();
+        return token_str;
     }
 };

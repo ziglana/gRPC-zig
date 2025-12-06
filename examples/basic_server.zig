@@ -1,5 +1,5 @@
 const std = @import("std");
-const GrpcServer = @import("../src/server.zig").GrpcServer;
+const GrpcServer = @import("grpc").GrpcServer;
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -10,16 +10,22 @@ pub fn main() !void {
     defer server.deinit();
 
     // Register handlers
-    try server.handlers.append(.{
-        .name = "SayHello",
-        .handler_fn = sayHello,
-    });
-    
+    try server.handlers.append(
+        allocator,
+        .{
+            .name = "SayHello",
+            .handler_fn = sayHello,
+        },
+    );
+
     // Register benchmark handler
-    try server.handlers.append(.{
-        .name = "Benchmark",
-        .handler_fn = benchmarkHandler,
-    });
+    try server.handlers.append(
+        allocator,
+        .{
+            .name = "Benchmark",
+            .handler_fn = benchmarkHandler,
+        },
+    );
 
     try server.start();
 }
@@ -31,6 +37,6 @@ fn sayHello(request: []const u8, allocator: std.mem.Allocator) ![]u8 {
 
 fn benchmarkHandler(request: []const u8, allocator: std.mem.Allocator) ![]u8 {
     // Echo the request back with a timestamp for benchmarking
-    const response = try std.fmt.allocPrint(allocator, "Echo: {s} (processed at {})", .{ request, std.time.milliTimestamp() });
+    const response = try std.fmt.allocPrint(allocator, "Echo: {s} (processed at {d})", .{ request, std.time.milliTimestamp() });
     return response;
 }

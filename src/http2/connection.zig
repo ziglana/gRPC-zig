@@ -20,7 +20,7 @@ pub const Connection = struct {
     encoder: hpack.Encoder,
     decoder: hpack.Decoder,
 
-    const PREFACE = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
+    pub const PREFACE = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
 
     pub fn init(allocator: std.mem.Allocator) !Connection {
         return Connection{
@@ -46,16 +46,14 @@ pub const Connection = struct {
         const id = self.next_stream_id;
         self.next_stream_id += 2;
 
-        var new_stream = try stream.Stream.init(id, self.allocator);
+        const new_stream = try stream.Stream.init(id, self.allocator);
         try self.streams.put(id, new_stream);
         return self.streams.getPtr(id).?;
     }
 
     pub fn sendHeaders(self: *Connection, stream_id: u31, headers: std.StringHashMap([]const u8)) !void {
-        var stream_ptr = self.streams.getPtr(stream_id) orelse return ConnectionError.StreamError;
-        
         // Encode headers using HPACK
-        var encoded = try self.encoder.encode(headers);
+        const encoded = try self.encoder.encode(headers);
         defer self.allocator.free(encoded);
 
         // Create HEADERS frame
