@@ -142,4 +142,31 @@ pub fn build(b: *std.Build) void {
     const run_tests = b.addRunArtifact(tests);
     const test_step = b.step("test", "Run tests");
     test_step.dependOn(&run_tests.step);
+
+    // Integration test server
+    const integration_test_mod = b.createModule(.{
+        .root_source_file = b.path("integration_test/proto.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{.{ .name = "spice", .module = spice_mod }},
+    });
+
+    const integration_test_server = b.addExecutable(.{
+        .name = "grpc-test-server",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("integration_test/test_server.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{
+                .{ .name = "spice", .module = spice_mod },
+                .{ .name = "grpc", .module = server_mod },
+                .{ .name = "proto", .module = integration_test_mod },
+            },
+        }),
+    });
+    integration_test_server.linkLibrary(zlib_lib);
+
+    const install_integration_test = b.addInstallArtifact(integration_test_server, .{});
+    const integration_test_step = b.step("integration_test", "Build integration test server");
+    integration_test_step.dependOn(&install_integration_test.step);
 }
