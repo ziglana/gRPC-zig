@@ -58,16 +58,16 @@ pub fn build(b: *std.Build) void {
         .{ .include_extensions = &[_][]const u8{ ".h" } },
     );
 
-    // Server executable
-    const server_mod = b.createModule(.{
+    // Server module (for internal use and library export)
+    const server_mod = b.addModule("grpc-server", .{
         .root_source_file = b.path("src/server.zig"),
         .target = target,
         .optimize = optimize,
         .imports = &.{.{ .name = "spice", .module = spice_mod }},
     });
 
-    // Client executable
-    const client_mod = b.createModule(.{
+    // Client module (for internal use and library export)
+    const client_mod = b.addModule("grpc-client", .{
         .root_source_file = b.path("src/client.zig"),
         .target = target,
         .optimize = optimize,
