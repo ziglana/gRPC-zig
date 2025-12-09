@@ -81,17 +81,15 @@ pub const Transport = struct {
         if (length > 0) {
             const payload_read = try self.stream.read(payload);
             if (payload_read < length) {
-                self.allocator.free(payload);
                 return TransportError.ConnectionClosed;
             }
         }
 
         // For DATA frames, return payload
-        if (frame_type == 0x0) { // DATA frame
+        if (frame_type == .DATA) {
             return payload;
         }
 
-        self.allocator.free(payload);
         return TransportError.Http2Error;
     }
 
