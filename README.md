@@ -65,7 +65,7 @@ try stream.push("Final message", true);
 1. Fetch the dependency:
 
 ```sh
-zig fetch --save "git+https://ziglana/grpc-zig/gRPC-zig#main"
+zig fetch --save "git+https://github.com/ziglana/gRPC-zig#main"
 ```
 
 2. Add to your `build.zig`:
