@@ -86,7 +86,7 @@ pub const Transport = struct {
         }
 
         // For DATA frames, return payload
-        if (frame_type == .DATA) {
+        if (frame_type == @intFromEnum(http2.frame.FrameType.DATA)) {
             return payload;
         }
 
@@ -94,26 +94,22 @@ pub const Transport = struct {
     }
 
     pub fn writeMessage(self: *Transport, message: []const u8) !void {
-        var data_frame = try http2.frame.Frame.init(self.allocator);
-        defer data_frame.deinit(self.allocator);
-
-        data_frame.type = .DATA;
-        data_frame.flags = http2.frame.FrameFlags.END_STREAM;
-        data_frame.stream_id = 1; // Use appropriate stream ID
-        data_frame.payload = message;
-        data_frame.length = @intCast(message.len);
+        const frame_type = http2.frame.FrameType.DATA;
+        const frame_flags = http2.frame.FrameFlags.END_STREAM;
+        const stream_id: u31 = 1; // Use appropriate stream ID
+        const length: u24 = @intCast(message.len);
 
         // Write frame header
         var header: [9]u8 = undefined;
-        header[0] = @intCast((data_frame.length >> 16) & 0xFF);
-        header[1] = @intCast((data_frame.length >> 8) & 0xFF);
-        header[2] = @intCast(data_frame.length & 0xFF);
-        header[3] = @intFromEnum(data_frame.type);
-        header[4] = data_frame.flags;
-        header[5] = @intCast((data_frame.stream_id >> 24) & 0xFF);
-        header[6] = @intCast((data_frame.stream_id >> 16) & 0xFF);
-        header[7] = @intCast((data_frame.stream_id >> 8) & 0xFF);
-        header[8] = @intCast(data_frame.stream_id & 0xFF);
+        header[0] = @intCast((length >> 16) & 0xFF);
+        header[1] = @intCast((length >> 8) & 0xFF);
+        header[2] = @intCast(length & 0xFF);
+        header[3] = @intFromEnum(frame_type);
+        header[4] = frame_flags;
+        header[5] = @intCast((stream_id >> 24) & 0xFF);
+        header[6] = @intCast((stream_id >> 16) & 0xFF);
+        header[7] = @intCast((stream_id >> 8) & 0xFF);
+        header[8] = @intCast(stream_id & 0xFF);
 
         _ = try self.stream.write(&header);
         if (message.len > 0) {

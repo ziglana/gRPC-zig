@@ -14,8 +14,7 @@ pub const GrpcClient = struct {
     auth: ?auth.Auth,
 
     pub fn init(allocator: std.mem.Allocator, host: []const u8, port: u16) !GrpcClient {
-        const address = try std.net.Address.parseIp(host, port);
-        const connection = try std.net.tcpConnectToAddress(address);
+        const connection = try std.net.tcpConnectToHost(allocator, host, port);
 
         return GrpcClient{
             .allocator = allocator,

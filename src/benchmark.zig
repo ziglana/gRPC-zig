@@ -252,7 +252,7 @@ fn parseArgs(allocator: std.mem.Allocator) !struct { config: BenchmarkConfig, ou
     var i: usize = 1;
     while (i < args.len) : (i += 1) {
         if (std.mem.eql(u8, args[i], "--host") and i + 1 < args.len) {
-            config.host = args[i + 1];
+            config.host = try allocator.dupe(u8, args[i + 1]);
             i += 1;
         } else if (std.mem.eql(u8, args[i], "--port") and i + 1 < args.len) {
             config.port = try std.fmt.parseInt(u16, args[i + 1], 10);

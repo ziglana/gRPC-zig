@@ -42,12 +42,11 @@ pub const GrpcServer = struct {
     }
 
     pub fn start(self: *GrpcServer) !void {
-        var connection = try self.server.accept();
         try self.health_check.setStatus("grpc.health.v1.Health", .SERVING);
         std.log.info("Server listening on {any}", .{self.address});
 
         while (true) {
-            connection = try self.server.accept();
+            const connection = try self.server.accept();
             try self.handleConnection(connection);
         }
     }
