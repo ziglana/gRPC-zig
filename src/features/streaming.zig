@@ -17,7 +17,7 @@ pub const MessageStream = struct {
 
     pub fn init(allocator: std.mem.Allocator, max_buffer_size: usize) MessageStream {
         return .{
-            .buffer = std.ArrayList(StreamingMessage).init(allocator),
+            .buffer = std.ArrayList(StreamingMessage){},
             .allocator = allocator,
             .max_buffer_size = max_buffer_size,
         };
@@ -27,7 +27,7 @@ pub const MessageStream = struct {
         for (self.buffer.items) |msg| {
             self.allocator.free(msg.data);
         }
-        self.buffer.deinit();
+        self.buffer.deinit(self.allocator);
     }
 
     pub fn push(self: *MessageStream, data: []const u8, is_end: bool) !void {
@@ -39,7 +39,7 @@ pub const MessageStream = struct {
             .data = try self.allocator.dupe(u8, data),
             .is_end = is_end,
         };
-        try self.buffer.append(msg);
+        try self.buffer.append(self.allocator, msg);
     }
 
     pub fn pop(self: *MessageStream) ?StreamingMessage {

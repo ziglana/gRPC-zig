@@ -42,23 +42,23 @@ pub const Frame = struct {
     }
 
     pub fn encode(self: Frame, writer: anytype) !void {
-        try writer.writeIntBig(u24, self.length);
-        try writer.writeIntBig(u8, @intFromEnum(self.type));
-        try writer.writeIntBig(u8, self.flags);
-        try writer.writeIntBig(u32, self.stream_id);
+        try writer.writeInt(u24, self.length, .little);
+        try writer.writeInt(u8, @intFromEnum(self.type), .little);
+        try writer.writeInt(u8, self.flags, .little);
+        try writer.writeInt(u32, self.stream_id, .little);
         try writer.writeAll(self.payload);
     }
 
     pub fn decode(reader: anytype, allocator: std.mem.Allocator) !Frame {
         var frame = try Frame.init(allocator);
-        frame.length = try reader.readIntBig(u24);
-        frame.type = @enumFromInt(try reader.readIntBig(u8));
-        frame.flags = try reader.readIntBig(u8);
-        frame.stream_id = @intCast(try reader.readIntBig(u32));
-        
+        frame.length = try reader.readInt(u24, .big);
+        frame.type = @enumFromInt(try reader.readInt(u8, .big));
+        frame.flags = try reader.readInt(u8, .big);
+        frame.stream_id = @intCast(try reader.readInt(u32, .big));
+
         frame.payload = try allocator.alloc(u8, frame.length);
         _ = try reader.readAll(frame.payload);
-        
+
         return frame;
     }
 };
