@@ -109,7 +109,7 @@ All features are demonstrated in the [examples/](examples/) directory:
 1. Add the dependency to your project:
 
 ```sh
-zig fetch --save git+https://github.com/inge4pres/gRPC-zig#main
+zig fetch --save git+https://github.com/ziglana/gRPC-zig#main
 ```
 
 2. Add to your `build.zig`:
@@ -144,7 +144,7 @@ Clone the repository and add it to your `build.zig.zon`:
     .version = "0.1.0",
     .dependencies = .{
         .grpc_zig = .{
-            .url = "https://github.com/inge4pres/gRPC-zig/archive/refs/heads/main.tar.gz",
+            .url = "https://github.com/ziglana/gRPC-zig/archive/refs/heads/main.tar.gz",
             // Replace with actual hash after first fetch
             .hash = "...",
         },
