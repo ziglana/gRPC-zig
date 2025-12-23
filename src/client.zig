@@ -14,12 +14,11 @@ pub const GrpcClient = struct {
     auth: ?auth.Auth,
 
     pub fn init(allocator: std.mem.Allocator, host: []const u8, port: u16) !GrpcClient {
-        const address = try std.net.Address.parseIp(host, port);
-        const connection = try std.net.tcpConnectToAddress(address);
-        
+        const connection = try std.net.tcpConnectToHost(allocator, host, port);
+
         return GrpcClient{
             .allocator = allocator,
-            .transport = try transport.Transport.init(allocator, connection),
+            .transport = try transport.Transport.initClient(allocator, connection),
             .compression = compression.Compression.init(allocator),
             .auth = null,
         };
@@ -50,7 +49,7 @@ pub const GrpcClient = struct {
         return parsed.status;
     }
 
-    pub fn call(self: *GrpcClient, method: []const u8, request: []const u8, compression_alg: compression.Compression.Algorithm) ![]u8 {
+    pub fn call(self: *GrpcClient, _: []const u8, request: []const u8, compression_alg: compression.Compression.Algorithm) ![]u8 {
         // Add auth token if available
         var headers = std.StringHashMap([]const u8).init(self.allocator);
         defer headers.deinit();
@@ -67,7 +66,8 @@ pub const GrpcClient = struct {
 
         try self.transport.writeMessage(compressed);
         const response_bytes = try self.transport.readMessage();
-        
+        defer self.allocator.free(response_bytes);
+
         // Decompress response
         return self.compression.decompress(response_bytes, compression_alg);
     }

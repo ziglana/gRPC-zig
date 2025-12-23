@@ -20,60 +20,136 @@ A blazingly fast gRPC client & server implementation in Zig, designed for maximu
 ## 🚀 Quick Start
 
 ```zig
-// Server
-const server = try GrpcServer.init(allocator, 50051, "secret-key");
-try server.handlers.append(.{
-    .name = "SayHello",
-    .handler_fn = sayHello,
-});
-try server.start();
+const std = @import("std");
+const GrpcServer = @import("grpc-server").GrpcServer;
 
-// Client
-var client = try GrpcClient.init(allocator, "localhost", 50051);
-const response = try client.call("SayHello", "World", .none);
+pub fn main() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+    const allocator = gpa.allocator();
+
+    // Create and configure server
+    var server = try GrpcServer.init(allocator, 50051, "secret-key");
+    defer server.deinit();
+
+    // Register handlers
+    try server.handlers.append(allocator, .{
+        .name = "SayHello",
+        .handler_fn = sayHello,
+    });
+
+    // Start server
+    try server.start();
+}
+
+fn sayHello(request: []const u8, allocator: std.mem.Allocator) ![]u8 {
+    _ = request;
+    return allocator.dupe(u8, "Hello from gRPC-zig!");
+}
 ```
 
 ## 📚 Examples
 
 ### Basic Server
 
+See [examples/basic_server.zig](examples/basic_server.zig) for a complete example.
+
 ```zig
 const std = @import("std");
-const GrpcServer = @import("server.zig").GrpcServer;
+const GrpcServer = @import("grpc-server").GrpcServer;
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
+    const allocator = gpa.allocator();
 
-    var server = try GrpcServer.init(gpa.allocator(), 50051, "secret-key");
+    var server = try GrpcServer.init(allocator, 50051, "secret-key");
     defer server.deinit();
 
     try server.start();
 }
 ```
 
-### Streaming
+### Basic Client
+
+See [examples/basic_client.zig](examples/basic_client.zig) for a complete example.
 
 ```zig
-var stream = streaming.MessageStream.init(allocator, 5);
-try stream.push("First message", false);
-try stream.push("Final message", true);
+const std = @import("std");
+const GrpcClient = @import("grpc-client").GrpcClient;
+
+pub fn main() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+    const allocator = gpa.allocator();
+
+    var client = try GrpcClient.init(allocator, "localhost", 50051);
+    defer client.deinit();
+
+    const response = try client.call("SayHello", "World", .none);
+    defer allocator.free(response);
+
+    std.debug.print("Response: {s}\n", .{response});
+}
 ```
+
+### Features
+
+All features are demonstrated in the [examples/](examples/) directory:
+
+- **[Authentication](examples/auth.zig)**: JWT token generation and verification
+- **[Compression](examples/compression.zig)**: gzip/deflate support
+- **[Streaming](examples/streaming.zig)**: Bi-directional message streaming
+- **[Health Checks](examples/health.zig)**: Service health monitoring
 
 ## 🔧 Installation
 
-1. Fetch the dependency:
+### Option 1: Using zig fetch (Recommended)
+
+1. Add the dependency to your project:
 
 ```sh
-zig fetch --save "git+https://ziglana/grpc-zig/gRPC-zig#main"
+zig fetch --save git+https://github.com/ziglana/gRPC-zig#main
 ```
 
 2. Add to your `build.zig`:
 
 ```zig
-const grpc_zig = b.dependency("grpc_zig", .{});
+const grpc_zig_dep = b.dependency("grpc_zig", .{
+    .target = target,
+    .optimize = optimize,
+});
 
-exe.addModule("grpc", grpc_zig.module("grpc"));
+// For server development
+exe.root_module.addImport("grpc-server", grpc_zig_dep.module("grpc-server"));
+
+// For client development
+exe.root_module.addImport("grpc-client", grpc_zig_dep.module("grpc-client"));
+```
+
+3. Import in your code:
+
+```zig
+const GrpcServer = @import("grpc-server").GrpcServer;
+const GrpcClient = @import("grpc-client").GrpcClient;
+```
+
+### Option 2: Manual setup
+
+Clone the repository and add it to your `build.zig.zon`:
+
+```zig
+.{
+    .name = "my-project",
+    .version = "0.1.0",
+    .dependencies = .{
+        .grpc_zig = .{
+            .url = "https://github.com/ziglana/gRPC-zig/archive/refs/heads/main.tar.gz",
+            // Replace with actual hash after first fetch
+            .hash = "...",
+        },
+    },
+}
 ```
 
 ## 🏃 Performance
@@ -122,6 +198,54 @@ zig build benchmark
 The benchmarks automatically run in CI/CD on every pull request and provide performance feedback.
 
 📖 **[Detailed Benchmarking Guide](docs/benchmarking.md)**
+
+## 🧪 Testing
+
+### Unit Tests
+
+Run the unit test suite:
+
+```bash
+zig build test
+```
+
+The test suite covers:
+- Compression algorithms (gzip, deflate, none)
+- Benchmark handler functionality
+- Core protocol functionality
+
+### Integration Tests
+
+Run integration tests with a Python client validating the Zig server:
+
+```bash
+cd integration_test
+./run_tests.sh
+```
+
+Or manually:
+
+```bash
+# Build and start the test server
+zig build integration_test
+./zig-out/bin/grpc-test-server
+
+# In another terminal, run Python tests
+cd integration_test
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python3 test_client.py
+```
+
+The integration tests validate:
+- HTTP/2 protocol compliance
+- gRPC request/response flow
+- Compression functionality
+- Health checking
+- Authentication integration
+
+📖 **[Integration Test Documentation](integration_test/README.md)**
 
 ## 🤝 Contributing
 
