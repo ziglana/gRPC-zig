@@ -1,0 +1,5 @@
+# Execution Plan
+
+## Tasks: 2
+
+{"summary":"Fix CI build error by updating spice dependency URL from repository URL to release archive URL, then update the hash.","tasks":[{"id":"T001","tool":"Bash","args":{"command":"cat /tmp/claudev-pr-40697/build.zig.zon 2>/dev/null || echo \"File does not exist\""},"depends_on":[],"description":"Check current build.zig.zon content for spice dependency URL"},{"id":"T002","tool":"Bash","args":{"command":"curl -sL https://api.github.com/repos/judofyr/spice/releases/latest 2>/dev/null | grep -E '\"tag_name\"|\"tarball_url\"' | head -5"},"depends_on":["T001"],"description":"Get latest release tag and tarball URL for spice library"}]}

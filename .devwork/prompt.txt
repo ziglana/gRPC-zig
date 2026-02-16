@@ -1,0 +1,107 @@
+# PR #19: [WIP] Fix CI job error for unrecognized Content-Type header
+
+## Description
+Thanks for asking me to work on this. I will get started on it and keep this PR's description up to date as I form a plan and make progress.
+
+
+<!-- START COPILOT ORIGINAL PROMPT -->
+
+
+
+<details>
+
+<summary>Original prompt</summary>
+
+> @l r @copilot
+> 
+> The CI job failed because of this error in build.zig.zon:
+> 
+> ```
+> error: unrecognized 'Content-Type' header: 'text/html; charset=utf-8'
+>   .url = "https://github.com/judofyr/spice",
+> ```
+> 
+> The error means Zig tried to fetch https://github.com/judofyr/spice as a dependency URL, but it received an HTML page (likely a 404 or redirect) instead of a Zig package or archive. That URL points to a repository, not a downloadable release or .tar.gz archive, which Zig currently does not support for dependencies. It expects a direct archive file link.
+> 
+> **Solution:**
+> - Change the `.spice.url` in your [build.zig.zon](https://github.com/ziglana/gRPC-zig/blob/de19864df84cd3616420b454c7d6e93066250317/build.zig.zon#L7) to a downloadable archive.  
+>   For example, use the `archive` URL from a tagged release:
+> 
+> ```zig
+> .spice = .{
+>     .url = "https://github.com/judofyr/spice/archive/refs/tags/v0.1.0.tar.gz",
+>     .hash = "<corresponding-hash>",
+> }
+> ```
+> - Update `.hash` for the new source. Run `zig fetch` or `zig build` to get the new hash value.
+> - Commit the fix with a message like `fix(build): update spice dependency to use release archive`.
+> 
+> This will resolve the unrecognized Content-Type error and allow the CI to fetch the dependency correctly.
+> 
+> This implementation bears strength in discipline.
+> 
+> (user memo: add a `make verify-deps` target for zig projects) (copilot ignore)
+
+
+</details>
+
+
+
+<!-- START COPILOT CODING AGENT TIPS -->
+---
+
+💬 We'd love your input! Share your thoughts on Copilot coding agent in our [2 minute survey](https://gh.io/copilot-coding-agent-survey).
+
+
+## Task
+Thanks for asking me to work on this. I will get started on it and keep this PR's description up to date as I form a plan and make progress.
+
+
+<!-- START COPILOT ORIGINAL PROMPT -->
+
+
+
+<details>
+
+<summary>Original prompt</summary>
+
+> @l r @copilot
+> 
+> The CI job failed because of this error in build.zig.zon:
+> 
+> ```
+> error: unrecognized 'Content-Type' header: 'text/html; charset=utf-8'
+>   .url = "https://github.com/judofyr/spice",
+> ```
+> 
+> The error means Zig tried to fetch https://github.com/judofyr/spice as a dependency URL, but it received an HTML page (likely a 404 or redirect) instead of a Zig package or archive. That URL points to a repository, not a downloadable release or .tar.gz archive, which Zig currently does not support for dependencies. It expects a direct archive file link.
+> 
+> **Solution:**
+> - Change the `.spice.url` in your [build.zig.zon](https://github.com/ziglana/gRPC-zig/blob/de19864df84cd3616420b454c7d6e93066250317/build.zig.zon#L7) to a downloadable archive.  
+>   For example, use the `archive` URL from a tagged release:
+> 
+> ```zig
+> .spice = .{
+>     .url = "https://github.com/judofyr/spice/archive/refs/tags/v0.1.0.tar.gz",
+>     .hash = "<corresponding-hash>",
+> }
+> ```
+> - Update `.hash` for the new source. Run `zig fetch` or `zig build` to get the new hash value.
+> - Commit the fix with a message like `fix(build): update spice dependency to use release archive`.
+> 
+> This will resolve the unrecognized Content-Type error and allow the CI to fetch the dependency correctly.
+> 
+> This implementation bears strength in discipline.
+> 
+> (user memo: add a `make verify-deps` target for zig projects) (copilot ignore)
+
+
+</details>
+
+
+
+<!-- START COPILOT CODING AGENT TIPS -->
+---
+
+💬 We'd love your input! Share your thoughts on Copilot coding agent in our [2 minute survey](https://gh.io/copilot-coding-agent-survey).
+

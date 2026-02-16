@@ -1,0 +1,10 @@
+{
+  "success": false,
+  "tasks_total": 2,
+  "tasks_completed": 0,
+  "tasks_failed": 1,
+  "planning_ms": 39958,
+  "execution_ms": 13447,
+  "total_ms": 53516,
+  "error": "Safety system is blocking a read-only command with a false positive about writing to /dev"
+}
