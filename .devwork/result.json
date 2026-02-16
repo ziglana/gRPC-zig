@@ -1,0 +1,10 @@
+{
+  "success": false,
+  "tasks_total": 6,
+  "tasks_completed": 4,
+  "tasks_failed": 1,
+  "planning_ms": 53207,
+  "execution_ms": 221757,
+  "total_ms": 348297,
+  "error": "Max retries exceeded for task: The command `zig version 2>/dev/null` triggers sandbox protection because the `2>/dev/null` references /dev/\n\nPartial progress:\n4 of 7 tasks completed successfully before failure.\nCompleted:\n  - Bash\n  - Write CLAUDE.md\n  - Write copilot-instructions.md\n  - Bash\nFailed at: Max retries exceeded for task: The command `zig version 2>/dev/null` triggers sandbox protection because the `2>/dev/null` references /dev/"
+}

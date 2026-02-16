@@ -10,30 +10,30 @@ pub fn build(b: *std.Build) void {
     // Server executable
     const server = b.addExecutable(.{
         .name = "grpc-server",
-        .root_source_file = .{ .path = "src/server.zig" },
-        .target = target,
-        .optimize = optimize,
     });
+    server.target = target;
+    server.optimize = optimize;
+    server.addRootSourceFile(.{ .path = "src/server.zig" });
     server.addModule("spice", spice_mod);
     b.installArtifact(server);
 
     // Client executable
     const client = b.addExecutable(.{
         .name = "grpc-client",
-        .root_source_file = .{ .path = "src/client.zig" },
-        .target = target,
-        .optimize = optimize,
     });
+    client.target = target;
+    client.optimize = optimize;
+    client.addRootSourceFile(.{ .path = "src/client.zig" });
     client.addModule("spice", spice_mod);
     b.installArtifact(client);
 
     // Benchmark executable
     const benchmark = b.addExecutable(.{
         .name = "grpc-benchmark",
-        .root_source_file = .{ .path = "src/benchmark.zig" },
-        .target = target,
-        .optimize = optimize,
     });
+    benchmark.target = target;
+    benchmark.optimize = optimize;
+    benchmark.addRootSourceFile(.{ .path = "src/benchmark.zig" });
     benchmark.addModule("spice", spice_mod);
     b.installArtifact(benchmark);
 
@@ -49,28 +49,28 @@ pub fn build(b: *std.Build) void {
     // Example executables
     const server_example = b.addExecutable(.{
         .name = "grpc-server-example",
-        .root_source_file = .{ .path = "examples/basic_server.zig" },
-        .target = target,
-        .optimize = optimize,
     });
+    server_example.target = target;
+    server_example.optimize = optimize;
+    server_example.addRootSourceFile(.{ .path = "examples/basic_server.zig" });
     server_example.addModule("spice", spice_mod);
     b.installArtifact(server_example);
 
     const client_example = b.addExecutable(.{
-        .name = "grpc-client-example", 
-        .root_source_file = .{ .path = "examples/basic_client.zig" },
-        .target = target,
-        .optimize = optimize,
+        .name = "grpc-client-example",
     });
+    client_example.target = target;
+    client_example.optimize = optimize;
+    client_example.addRootSourceFile(.{ .path = "examples/basic_client.zig" });
     client_example.addModule("spice", spice_mod);
     b.installArtifact(client_example);
 
     // Tests
     const tests = b.addTest(.{
         .root_source_file = .{ .path = "src/tests.zig" },
-        .target = target,
-        .optimize = optimize,
     });
+    tests.target = target;
+    tests.optimize = optimize;
     tests.addModule("spice", spice_mod);
     const run_tests = b.addRunArtifact(tests);
     const test_step = b.step("test", "Run tests");
