@@ -1,0 +1,50 @@
+# Directory snapshot after SpecKit execution
+
+/tmp/claudev-pr-43226
+├── build.zig
+├── build.zig.zon
+├── docs
+│   └── benchmarking.md
+├── examples
+│   ├── auth.zig
+│   ├── basic_client.zig
+│   ├── basic_server.zig
+│   ├── compression.zig
+│   ├── health.zig
+│   ├── http2_transport.zig
+│   └── streaming.zig
+├── integration_test
+│   ├── proto.zig
+│   ├── README.md
+│   ├── requirements.txt
+│   ├── run_tests.sh
+│   ├── test_client.py
+│   ├── test_server.zig
+│   └── test_service.proto
+├── LICENSE
+├── README.md
+├── scripts
+│   └── run_benchmark.sh
+├── specs
+│   └── 020-mtls-support
+│       └── spec.md
+└── src
+    ├── benchmark.zig
+    ├── client.zig
+    ├── features
+    │   ├── auth.zig
+    │   ├── compression.zig
+    │   ├── health.zig
+    │   └── streaming.zig
+    ├── http2
+    │   ├── connection.zig
+    │   ├── frame.zig
+    │   ├── hpack.zig
+    │   └── stream.zig
+    ├── proto
+    │   └── service.zig
+    ├── server.zig
+    ├── tests.zig
+    └── transport.zig
+
+11 directories, 35 files
