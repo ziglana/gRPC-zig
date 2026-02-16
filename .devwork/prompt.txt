@@ -1,0 +1,89 @@
+# PR #21: [WIP] Set up Copilot instructions for repository
+
+## Description
+Thanks for assigning this issue to me. I'm starting to work on it and will keep this PR's description up to date as I form a plan and make progress.
+
+<!-- START COPILOT ORIGINAL PROMPT -->
+
+
+
+<details>
+
+<summary>Original prompt</summary>
+
+> 
+> ----
+> 
+> *This section details on the original issue you should resolve*
+> 
+> <issue_title>✨Set up Copilot instructions</issue_title>
+> <issue_description>Configure instructions for this repository as documented in [Best practices for Copilot coding agent in your repository](https://gh.io/copilot-coding-agent-tips)
+> 
+> <Onboard this repo></issue_description>
+> 
+> <agent_instructions>add all required presetup to build fast this project, test ci/cd</agent_instructions>
+> 
+> ## Comments on the Issue (you are @copilot in this section)
+> 
+> <comments>
+> </comments>
+> 
+
+
+</details>
+
+
+
+<!-- START COPILOT CODING AGENT SUFFIX -->
+
+- Fixes ziglana/gRPC-zig#9
+
+<!-- START COPILOT CODING AGENT TIPS -->
+---
+
+💬 We'd love your input! Share your thoughts on Copilot coding agent in our [2 minute survey](https://gh.io/copilot-coding-agent-survey).
+
+
+## Task
+Thanks for assigning this issue to me. I'm starting to work on it and will keep this PR's description up to date as I form a plan and make progress.
+
+<!-- START COPILOT ORIGINAL PROMPT -->
+
+
+
+<details>
+
+<summary>Original prompt</summary>
+
+> 
+> ----
+> 
+> *This section details on the original issue you should resolve*
+> 
+> <issue_title>✨Set up Copilot instructions</issue_title>
+> <issue_description>Configure instructions for this repository as documented in [Best practices for Copilot coding agent in your repository](https://gh.io/copilot-coding-agent-tips)
+> 
+> <Onboard this repo></issue_description>
+> 
+> <agent_instructions>add all required presetup to build fast this project, test ci/cd</agent_instructions>
+> 
+> ## Comments on the Issue (you are @copilot in this section)
+> 
+> <comments>
+> </comments>
+> 
+
+
+</details>
+
+
+
+<!-- START COPILOT CODING AGENT SUFFIX -->
+
+- Fixes ziglana/gRPC-zig#9
+
+<!-- START COPILOT CODING AGENT TIPS -->
+---
+
+💬 We'd love your input! Share your thoughts on Copilot coding agent in our [2 minute survey](https://gh.io/copilot-coding-agent-survey).
+
