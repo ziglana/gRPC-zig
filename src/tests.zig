@@ -29,12 +29,12 @@ const benchmark = @import("benchmark.zig");
 // }
 
 test "benchmark handler" {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+    var safe_allocator = std.heap.SafeAllocator.init(testing.allocator, .{});
+    defer _ = safe_allocator.deinit();
+    const allocator = safe_allocator.allocator();
 
     const request = "test_request";
-    const response = try benchmark.benchmarkHandler(request, allocator);
+    const response = try benchmark.benchmarkHandler(request, allocator, std.testing.io);
     defer allocator.free(response);
 
     // Verify response contains the request
@@ -46,14 +46,18 @@ test "benchmark handler" {
 test "compression - gzip" {
     const compression = @import("features/compression.zig");
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+    var safe_allocator = std.heap.SafeAllocator.init(testing.allocator, .{});
+    defer _ = safe_allocator.deinit();
+    const allocator = safe_allocator.allocator();
 
     var comp = compression.Compression.init(allocator);
 
     // Test data
-    const original = "Hello, World! This is a test of gzip compression. " ** 10;
+    const chunk = "Hello, World! This is a test of gzip compression. ";
+    const original: []const u8 = blk: {
+        const buf: [10][chunk.len]u8 = @splat(chunk[0..chunk.len].*);
+        break :blk @ptrCast(&buf);
+    };
 
     // Compress
     const compressed = try comp.compress(original, .gzip);
@@ -73,14 +77,18 @@ test "compression - gzip" {
 test "compression - deflate" {
     const compression = @import("features/compression.zig");
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+    var safe_allocator = std.heap.SafeAllocator.init(testing.allocator, .{});
+    defer _ = safe_allocator.deinit();
+    const allocator = safe_allocator.allocator();
 
     var comp = compression.Compression.init(allocator);
 
     // Test data
-    const original = "Deflate compression test data. " ** 20;
+    const chunk = "Deflate compression test data. ";
+    const original: []const u8 = blk: {
+        const buf: [20][chunk.len]u8 = @splat(chunk[0..chunk.len].*);
+        break :blk @ptrCast(&buf);
+    };
 
     // Compress
     const compressed = try comp.compress(original, .deflate);
@@ -100,9 +108,9 @@ test "compression - deflate" {
 test "compression - none algorithm" {
     const compression = @import("features/compression.zig");
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+    var safe_allocator = std.heap.SafeAllocator.init(testing.allocator, .{});
+    defer _ = safe_allocator.deinit();
+    const allocator = safe_allocator.allocator();
 
     var comp = compression.Compression.init(allocator);
 

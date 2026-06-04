@@ -2,9 +2,9 @@ const std = @import("std");
 const compression = @import("features/compression.zig");
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+    var safe_allocator = std.heap.SafeAllocator.init(init.gpa, .{});
+    defer _ = safe_allocator.deinit();
+    const allocator = safe_allocator.allocator();
 
     var comp = compression.Compression.init(allocator);
     const data = "Hello, this is some test data for compression!";

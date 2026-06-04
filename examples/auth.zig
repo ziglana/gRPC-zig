@@ -1,12 +1,12 @@
 const std = @import("std");
 const auth = @import("features/auth.zig");
 
-pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+pub fn main(init: std.process.Init) !void {
+    var safe_allocator = std.heap.SafeAllocator.init(init.gpa, .{});
+    defer _ = safe_allocator.deinit();
+    const allocator = safe_allocator.allocator();
 
-    var auth_handler = auth.Auth.init(allocator, "my-secret-key");
+    var auth_handler = auth.Auth.init(allocator, init.io, "my-secret-key");
 
     // Generate a token
     const token = try auth_handler.generateToken("user123", 3600);

@@ -26,7 +26,7 @@ pub const Encoder = struct {
     }
 
     pub fn encode(self: *Encoder, headers: std.StringHashMap([]const u8)) ![]u8 {
-        var buffer = std.ArrayList(u8){};
+        var buffer: std.ArrayList(u8) = .empty;
         errdefer buffer.deinit(self.allocator);
 
         var it = headers.iterator();

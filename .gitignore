@@ -1,5 +1,6 @@
 .zig-cache/
 zig-out/
+zig-pkg/
 
 # Benchmark results
 benchmark_results.json

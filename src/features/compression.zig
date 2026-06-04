@@ -1,7 +1,5 @@
 const std = @import("std");
-const c = @cImport({
-    @cInclude("zlib.h");
-});
+const c = @import("zlib");
 
 pub const CompressionError = error{
     CompressionFailed,

@@ -9,16 +9,19 @@ const health = @import("features/health.zig");
 
 pub const GrpcClient = struct {
     allocator: std.mem.Allocator,
+    io: std.Io,
     transport: transport.Transport,
     compression: compression.Compression,
     auth: ?auth.Auth,
 
-    pub fn init(allocator: std.mem.Allocator, host: []const u8, port: u16) !GrpcClient {
-        const connection = try std.net.tcpConnectToHost(allocator, host, port);
+    pub fn init(allocator: std.mem.Allocator, io: std.Io, host: []const u8, port: u16) !GrpcClient {
+        const hostname = try std.Io.net.HostName.init(host);
+        const connection = try hostname.connect(io, port, .{ .mode = .stream });
 
         return GrpcClient{
             .allocator = allocator,
-            .transport = try transport.Transport.initClient(allocator, connection),
+            .io = io,
+            .transport = try transport.Transport.initClient(allocator, io, connection),
             .compression = compression.Compression.init(allocator),
             .auth = null,
         };
@@ -29,7 +32,7 @@ pub const GrpcClient = struct {
     }
 
     pub fn setAuth(self: *GrpcClient, secret_key: []const u8) !void {
-        self.auth = auth.Auth.init(self.allocator, secret_key);
+        self.auth = auth.Auth.init(self.allocator, self.io, secret_key);
     }
 
     pub fn checkHealth(self: *GrpcClient, service: []const u8) !health.HealthStatus {
