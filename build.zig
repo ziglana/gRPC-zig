@@ -39,7 +39,7 @@ pub fn build(b: *std.Build) void {
 
     for (zlib_sources) |src| {
         const src_path = zlib_dep.path(src);
-        zlib_lib.addCSourceFile(.{
+        zlib_lib.root_module.addCSourceFile(.{
             .file = src_path,
             .flags = &[_][]const u8{
                 "-DHAVE_SYS_TYPES_H",
@@ -51,19 +51,30 @@ pub fn build(b: *std.Build) void {
         });
     }
 
-    zlib_lib.linkLibC();
+    zlib_lib.root_module.link_libc = true;
     zlib_lib.installHeadersDirectory(
         zlib_dep.path("."),
         ".",
-        .{ .include_extensions = &[_][]const u8{ ".h" } },
+        .{ .include_extensions = &[_][]const u8{".h"} },
     );
+
+    const zlib_translate_c = b.addTranslateC(.{
+        .root_source_file = zlib_dep.path("zlib.h"),
+        .target = target,
+        .optimize = optimize,
+    });
+    zlib_translate_c.addIncludePath(zlib_dep.path("."));
+    const zlib_mod = zlib_translate_c.createModule();
 
     // Server module (for internal use and library export)
     const server_mod = b.addModule("grpc-server", .{
         .root_source_file = b.path("src/server.zig"),
         .target = target,
         .optimize = optimize,
-        .imports = &.{.{ .name = "spice", .module = spice_mod }},
+        .imports = &.{
+            .{ .name = "spice", .module = spice_mod },
+            .{ .name = "zlib", .module = zlib_mod },
+        },
     });
 
     // Client module (for internal use and library export)
@@ -71,7 +82,10 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/client.zig"),
         .target = target,
         .optimize = optimize,
-        .imports = &.{.{ .name = "spice", .module = spice_mod }},
+        .imports = &.{
+            .{ .name = "spice", .module = spice_mod },
+            .{ .name = "zlib", .module = zlib_mod },
+        },
     });
 
     // Benchmark executable
@@ -81,10 +95,13 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/benchmark.zig"),
             .target = target,
             .optimize = optimize,
-            .imports = &.{.{ .name = "spice", .module = spice_mod }},
+            .imports = &.{
+                .{ .name = "spice", .module = spice_mod },
+                .{ .name = "zlib", .module = zlib_mod },
+            },
         }),
     });
-    benchmark.linkLibrary(zlib_lib);
+    benchmark.root_module.linkLibrary(zlib_lib);
     b.installArtifact(benchmark);
 
     // Benchmark step with automatic server management
@@ -95,10 +112,10 @@ pub fn build(b: *std.Build) void {
         "sh",
         "-c",
         "trap 'kill $SERVER_PID 2>/dev/null' EXIT; " ++
-        "./zig-out/bin/grpc-server-example & SERVER_PID=$!; " ++
-        "sleep 2; " ++
-        "./zig-out/bin/grpc-benchmark --host localhost --port 50051 --requests 10 --clients 1 --size 512 --output text; " ++
-        "kill $SERVER_PID 2>/dev/null || true",
+            "./zig-out/bin/grpc-server-example & SERVER_PID=$!; " ++
+            "sleep 2; " ++
+            "./zig-out/bin/grpc-benchmark --host localhost --port 50051 --requests 10 --clients 1 --size 512 --output text; " ++
+            "kill $SERVER_PID 2>/dev/null || true",
     });
     benchmark_cmd.step.dependOn(b.getInstallStep());
     benchmark_step.dependOn(&benchmark_cmd.step);
@@ -106,9 +123,7 @@ pub fn build(b: *std.Build) void {
     // Also keep the standalone benchmark executable for manual testing
     const run_benchmark_manual = b.addRunArtifact(benchmark);
     run_benchmark_manual.step.dependOn(b.getInstallStep());
-    if (b.args) |args| {
-        run_benchmark_manual.addArgs(args);
-    }
+    run_benchmark_manual.addPassthruArgs();
     const benchmark_manual_step = b.step("benchmark-manual", "Run benchmark manually (requires server running)");
     benchmark_manual_step.dependOn(&run_benchmark_manual.step);
 
@@ -125,7 +140,7 @@ pub fn build(b: *std.Build) void {
             },
         }),
     });
-    server_example.linkLibrary(zlib_lib);
+    server_example.root_module.linkLibrary(zlib_lib);
     b.installArtifact(server_example);
 
     const client_example = b.addExecutable(.{
@@ -140,7 +155,7 @@ pub fn build(b: *std.Build) void {
             },
         }),
     });
-    client_example.linkLibrary(zlib_lib);
+    client_example.root_module.linkLibrary(zlib_lib);
     b.installArtifact(client_example);
 
     // Tests
@@ -150,10 +165,13 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/tests.zig"),
             .target = target,
             .optimize = optimize,
-            .imports = &.{.{ .name = "spice", .module = spice_mod }},
+            .imports = &.{
+                .{ .name = "spice", .module = spice_mod },
+                .{ .name = "zlib", .module = zlib_mod },
+            },
         }),
     });
-    tests.linkLibrary(zlib_lib);
+    tests.root_module.linkLibrary(zlib_lib);
 
     const run_tests = b.addRunArtifact(tests);
     const test_step = b.step("test", "Run tests");
@@ -180,7 +198,7 @@ pub fn build(b: *std.Build) void {
             },
         }),
     });
-    integration_test_server.linkLibrary(zlib_lib);
+    integration_test_server.root_module.linkLibrary(zlib_lib);
 
     const install_integration_test = b.addInstallArtifact(integration_test_server, .{});
     const integration_test_step = b.step("integration_test", "Build integration test server");

@@ -2,9 +2,9 @@ const std = @import("std");
 const health = @import("features/health.zig");
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+    var safe_allocator = std.heap.SafeAllocator.init(init.gpa, .{});
+    defer _ = safe_allocator.deinit();
+    const allocator = safe_allocator.allocator();
 
     var health_checker = health.HealthCheck.init(allocator);
     defer health_checker.deinit();

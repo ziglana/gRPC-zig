@@ -17,7 +17,7 @@ pub const MessageStream = struct {
 
     pub fn init(allocator: std.mem.Allocator, max_buffer_size: usize) MessageStream {
         return .{
-            .buffer = std.ArrayList(StreamingMessage){},
+            .buffer = .empty,
             .allocator = allocator,
             .max_buffer_size = max_buffer_size,
         };

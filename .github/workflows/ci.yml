@@ -1,7 +1,7 @@
 name: CI/CD with Benchmarks
 
 env:
-  ZIG_VERSION: 0.15.2
+  ZIG_VERSION: 0.17.0
 
 on:
   push:

@@ -125,46 +125,59 @@ def run_tests():
     print("=" * 60)
     print()
 
-    client = SimpleGrpcClient()
-
     # Test 1: Connection
     print("Test 1: Server Connection")
     print("-" * 60)
+    client = SimpleGrpcClient()
     if not client.connect():
         print("\n✗ FAILED: Could not connect to server")
         print("  Make sure the server is running on localhost:50052")
         return False
+    client.close()
     print()
 
     # Test 2: Echo handler
     print("Test 2: Echo Handler")
     print("-" * 60)
+    client = SimpleGrpcClient()
+    if not client.connect():
+        print("✗ FAILED: Echo test failed")
+        return False
     test_message = "Hello from Python test client!"
     if not client.send_message("Echo", test_message):
         print("✗ FAILED: Echo test failed")
         client.close()
         return False
+    client.close()
     print()
 
     # Test 3: CompressedEcho handler
     print("Test 3: CompressedEcho Handler")
     print("-" * 60)
+    client = SimpleGrpcClient()
+    if not client.connect():
+        print("✗ FAILED: CompressedEcho test failed")
+        return False
     if not client.send_message("CompressedEcho", "Test compression"):
         print("✗ FAILED: CompressedEcho test failed")
         client.close()
         return False
+    client.close()
     print()
 
     # Test 4: HealthCheck handler
     print("Test 4: HealthCheck Handler")
     print("-" * 60)
+    client = SimpleGrpcClient()
+    if not client.connect():
+        print("✗ FAILED: HealthCheck test failed")
+        return False
     if not client.send_message("HealthCheck", ""):
         print("✗ FAILED: HealthCheck test failed")
         client.close()
         return False
-    print()
-
     client.close()
+    print()
 
     print("=" * 60)
     print("✓ All tests passed!")

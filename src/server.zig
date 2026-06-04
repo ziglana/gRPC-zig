@@ -9,35 +9,37 @@ const health = @import("features/health.zig");
 
 pub const Handler = struct {
     name: []const u8,
-    handler_fn: *const fn ([]const u8, std.mem.Allocator) anyerror![]u8,
+    handler_fn: *const fn ([]const u8, std.mem.Allocator, std.Io) anyerror![]u8,
 };
 
 pub const GrpcServer = struct {
     allocator: std.mem.Allocator,
-    address: std.net.Address,
-    server: std.net.Server,
+    io: std.Io,
+    address: std.Io.net.IpAddress,
+    server: std.Io.net.Server,
     handlers: std.ArrayList(Handler),
     compression: compression.Compression,
     auth: auth.Auth,
     health_check: health.HealthCheck,
 
-    pub fn init(allocator: std.mem.Allocator, port: u16, secret_key: []const u8) !GrpcServer {
-        const address = try std.net.Address.parseIp("127.0.0.1", port);
-        const server = try address.listen(.{ .reuse_address = false });
+    pub fn init(allocator: std.mem.Allocator, io: std.Io, port: u16, secret_key: []const u8) !GrpcServer {
+        const address = try std.Io.net.IpAddress.parse("127.0.0.1", port);
+        const server = try address.listen(io, .{ .reuse_address = false });
         return GrpcServer{
             .allocator = allocator,
+            .io = io,
             .address = address,
             .server = server,
             .handlers = try std.ArrayList(Handler).initCapacity(allocator, 1),
             .compression = compression.Compression.init(allocator),
-            .auth = auth.Auth.init(allocator, secret_key),
+            .auth = auth.Auth.init(allocator, io, secret_key),
             .health_check = health.HealthCheck.init(allocator),
         };
     }
 
     pub fn deinit(self: *GrpcServer) void {
         self.handlers.deinit(self.allocator);
-        self.server.deinit();
+        self.server.deinit(self.io);
         self.health_check.deinit();
     }
 
@@ -45,17 +47,17 @@ pub const GrpcServer = struct {
         try self.health_check.setStatus("grpc.health.v1.Health", .SERVING);
 
         while (true) {
-            const connection = try self.server.accept();
+            const stream = try self.server.accept(self.io);
             // Handle connection errors gracefully - don't crash the server
-            self.handleConnection(connection) catch |err| {
+            self.handleConnection(stream) catch |err| {
                 std.log.err("Connection handling failed: {}", .{err});
                 continue;
             };
         }
     }
 
-    fn handleConnection(self: *GrpcServer, conn: std.net.Server.Connection) !void {
-        var trans = try transport.Transport.initServer(self.allocator, conn.stream);
+    fn handleConnection(self: *GrpcServer, stream: std.Io.net.Stream) !void {
+        var trans = try transport.Transport.initServer(self.allocator, self.io, stream);
         defer trans.deinit();
 
         // Setup streaming
@@ -83,7 +85,7 @@ pub const GrpcServer = struct {
             // TODO: Implement proper method routing based on request headers
             if (self.handlers.items.len > 0) {
                 const handler = self.handlers.items[0];
-                const response = try handler.handler_fn(decompressed, self.allocator);
+                const response = try handler.handler_fn(decompressed, self.allocator, self.io);
                 defer self.allocator.free(response);
 
                 // Use same compression as request

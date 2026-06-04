@@ -6,9 +6,9 @@ const http2 = struct {
 };
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+    var safe_allocator = std.heap.SafeAllocator.init(init.gpa, .{});
+    defer _ = safe_allocator.deinit();
+    const allocator = safe_allocator.allocator();
 
     // Create a TCP connection (simplified for example)
     const stream = try std.net.tcpConnectToHost(allocator, "localhost", 50051);
